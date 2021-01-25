@@ -1,0 +1,70 @@
+submitter="dingsiyu"
+fs_name="afs://xingtian.afs.baidu.com:9902"
+fs_ugi="NLP_KM_Data,NLP_km_2018"
+output_path="/user/NLP_KM_Data/dingsiyu/ernie2.1_base_zh/workdir/workdir_nodrop_and_lm_only_in_sent_reorder_0.6_add_shuffle_entity_0.1_gelu_and_del_oov_add_roberta_data/"
+task_name="sc_ernie_3p0_baseline"
+slurm_train_files_dir="afs://xingtian.afs.baidu.com:9902/user/NLP_KM_Data/dingsiyu/ernie2.1_base_zh/add_roberta/pretrained_data/"
+#remote_package_files_dir="afs://xingtian.afs.baidu.com:9902/user/NLP_KM_Data/dingsiyu/transformer-xl/packages/python2_paddle1.6.3"
+remote_package_files_dir="afs://xingtian.afs.baidu.com:9902/user/NLP_KM_Data/dingsiyu/transformer-xl/packages/python2_paddle1.8/"
+#remote_package_files_dir="afs://xingtian.afs.baidu.com:9902/user/NLP_KM_Data/dingsiyu/transformer-xl/packages/ernie_packages"
+
+#slurm_train_packages_dir="afs://xingtian.afs.baidu.com:9902/user/NLP_KM_Data/dingsiyu/transformer-xl/packages/ernie_packages"
+#slurm_train_packages_dir="afs://xingtian.afs.baidu.com:9902/user/NLP_KM_Data/dingsiyu/transformer-xl/packages/python2_paddle1.6.3"
+#slurm_train_packages_dir="afs://xingtian.afs.baidu.com:9902/user/NLP_KM_Data/dingsiyu/transformer-xl/packages/python2_paddle1.7"
+#train_files_dir="/user/NLP_KM_Data/pangchao04/ernie_multi_task_pretrain/*"
+
+mpi_on_k8s=1
+mount_afs="true"
+
+nodes=1
+#queue="nlp-temp"
+#queue="yq01-v100-box-1-8"
+#queue="yq01-p40-box-1-8"
+#queue="yq01-p40-3-8"
+#queue="yq01-v100-box-nlp-1-8"
+#queue="yq01-v100-box-1-8"
+queue="nlp-0-yq01-k8s-gpu-p40-8"
+#queue="nlp-1-yq01-k8s-gpu-p40-8"
+#queue="nlp-2-yq01-k8s-gpu-p40-8"
+#queue="nlp-3-yq01-k8s-gpu-p40-8"
+#queue="nlp-0-szwg01-k8s-gpu-k40-4"
+#queue="nlp-32g-3-yq01-k8s-gpu-v100-8"
+#queue="nlp-16g-0-yq01-k8s-gpu-v100-8"
+
+BATCH_SIZE=24
+#BATCH_SIZE=2048
+#BATCH_SIZE=8192
+#BATCH_SIZE=12288
+#BATCH_SIZE=19456
+#BATCH_SIZE=16384
+#BATCH_SIZE=32768
+vocab_path="./config/vocab.txt"
+generate_neg_sample="False"
+#lr_scheduler="noam_decay"
+lr_scheduler="linear_warmup_decay"
+num_train_steps=500000
+use_fp16="False"
+loss_scaling=128000
+SAVE_STEPS=10000
+VALIDATION_STEPS=10000
+CONFIG_PATH="./config/ernie_config.json"
+task_group_json="./config/task.json"
+#LR_RATE=2.56e-4
+#LR_RATE=5e-5
+LR_RATE=1e-4
+#LR_RATE=0.64e-4
+#LR_RATE=2.5e-5
+#WARMUP_STEPS=4000
+WARMUP_STEPS=0
+WEIGHT_DECAY=0.01
+MAX_LEN=8
+
+
+# init_model="ernie_multi_task_warmup_model"
+# hdfs_init_model="afs://xingtian.afs.baidu.com:9902/user/NLP_KM_Data/pangchao04/ernie_multi_task/model/ernie_multi_task_warmup_model.tar"
+# init_model="ernie_multi_task_warmup_model_task_loss_weight_1764000"
+# hdfs_init_model="afs://xingtian.afs.baidu.com:9902/user/NLP_KM_Data/pangchao04/ernie_multi_task/model/ernie_multi_task_warmup_model_task_loss_weight_1764000.tar"
+# init_model="ernie_multi_task_warmup_model_task_loss_weight_second_1896000"
+# hdfs_init_model="afs://xingtian.afs.baidu.com:9902/user/NLP_KM_Data/pangchao04/ernie_multi_task/model/ernie_multi_task_warmup_model_task_loss_weight_second_1896000.tar"
+
+use_experimental_executor="False"

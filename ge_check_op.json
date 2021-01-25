@@ -1,0 +1,37 @@
+{
+    "graph_id": 0,
+    "op": [],
+    "session_id": 0
+}
+{
+    "graph_id": 1,
+    "op": [
+        {
+            "error_type": "infer_shape_error",
+            "input0": {
+                "data_type": "DT_FLOAT",
+                "layout": "ND",
+                "shape": [
+                    2,
+                    12,
+                    64,
+                    64
+                ]
+            },
+            "input1": {
+                "data_type": "DT_FLOAT",
+                "layout": "ND",
+                "shape": []
+            },
+            "name": "softmax_grad.1024",
+            "output0": {
+                "data_type": "DT_FLOAT",
+                "layout": "ND",
+                "shape": []
+            },
+            "reason": "InferShapeFailed!",
+            "type": "SoftmaxGrad"
+        }
+    ],
+    "session_id": 0
+}

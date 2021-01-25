@@ -1,0 +1,42 @@
+[
+    {
+        "prob": 0.3, 
+        "data_func": "sent_distance", 
+        "task_name": "sent_distance", 
+        "valid_filelist": "./package/valid_filelist_sent_distance", 
+        "train_filelist": "./package/train_filelist_sent_distance", 
+        "loss_weight": 1.0, 
+        "num_labels": 4, 
+        "lm_weight": 1.0
+    }, 
+    {
+        "prob": 0.1, 
+        "data_func": "sent_rel_16cls", 
+        "task_name": "sent_rel_16cls", 
+        "valid_filelist": "./package/valid_filelist_sent_rel", 
+        "train_filelist": "./package/train_filelist_sent_rel", 
+        "loss_weight": 1.0, 
+        "num_labels": 16, 
+        "lm_weight": 0.0
+    },
+    {
+        "prob": 0.3,
+        "data_func": "multi_sent_sorted",
+        "task_name": "multi_sent_sorted",
+        "valid_filelist": "./package/valid_filelist_multi_sort_sorted",
+        "train_filelist": "./package/train_filelist_multi_sort_sorted",
+        "loss_weight": 1.0,
+        "num_labels": 32,
+        "lm_weight": 1.0
+    },
+    {
+		"prob": 0.3,
+        "data_func": "qt_3cls",
+        "task_name": "qt_3cls",
+        "valid_filelist": "./package/valid_filelist_qt",
+        "train_filelist": "./package/train_filelist_qt",
+        "loss_weight": 1.0,
+        "num_labels": 3,
+        "lm_weight": 0.4
+    }
+]
