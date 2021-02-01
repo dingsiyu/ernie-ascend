@@ -20,7 +20,7 @@ from __future__ import print_function
 import numpy as np
 import paddle
 import paddle.fluid as fluid
-from ascend import ascend_optimizer
+from paddle.distributed.fleet.meta_optimizers.ascend import ascend_optimizer
 from utils.fp16 import create_master_params_grads, master_param_to_train_param, apply_dynamic_loss_scaling
 
 def optimization(loss,
@@ -52,7 +52,8 @@ def optimization(loss,
     optimizer = fluid.optimizer.SGD(learning_rate=scheduled_lr)
     optimizer._learning_rate_map[fluid.default_main_program()] = scheduled_lr
     if ascend:
-        optimizer = ascend_optimizer.AscendOptimizer(optimizer, fetch_list=fetch_list)
+        optimizer = ascend_optimizer.AscendOptimizer(optimizer, fetch_list=fetch_list, auto_dp=True,
+                                                     rank_table_file=os.environ["RANK_TABLE_FILE"])
 
     fluid.clip.set_gradient_clip(
         clip=fluid.clip.GradientClipByGlobalNorm(clip_norm=1.0))
