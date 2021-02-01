@@ -18,6 +18,7 @@ from __future__ import division
 from __future__ import print_function
 
 import numpy as np
+import os
 import paddle
 import paddle.fluid as fluid
 from paddle.distributed.fleet.meta_optimizers.ascend import ascend_optimizer
@@ -73,7 +74,12 @@ def optimization(loss,
         param_list[param.name].stop_gradient = True
 
     loss = fluid.layers.mean(loss)
-    _, param_grads = optimizer.minimize(loss, startup_prog)#fluid.default_startup_program())
+    if ascend:
+        _, param_grads = optimizer.minimize(loss, startup_prog, 
+                                            auto_dp=True,
+                                            rank_table_file=os.getenv("RANK_TABLE_FILE", None))
+    else:
+        _, param_grads = optimizer.minimize(loss, startup_prog)
 
     # 打印网络
     with open('mnist.start.program', 'w') as fout:

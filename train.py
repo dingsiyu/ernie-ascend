@@ -23,12 +23,17 @@ import argparse
 import numpy as np
 import multiprocessing
 import paddle.fluid as fluid
+import paddle
+import os
 
 from reader.pretraining import ErnieDataReader
 from model.ernie import ErnieModel, ErnieConfig
 from optimization import optimization
 from utils.args import print_arguments
 from utils.init import init_checkpoint, init_pretraining_params
+import paddle.distributed.fleet.base.role_maker as role_maker
+import time
+import paddle.distributed.fleet as fleet
 
 from pretrain_args import parser
 import json
@@ -36,6 +41,11 @@ import json
 args = parser.parse_args()
 
 # yapf: enable.
+
+paddle.enable_static()
+
+role = role_maker.PaddleCloudRoleMaker(is_collective=True)
+fleet.init(role)
 
 ascend = 1
 with open(args.task_group_json) as f:
