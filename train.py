@@ -16,6 +16,7 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+import sys
 
 import os
 import time
@@ -23,29 +24,23 @@ import argparse
 import numpy as np
 import multiprocessing
 import paddle.fluid as fluid
-import paddle
-import os
 
 from reader.pretraining import ErnieDataReader
 from model.ernie import ErnieModel, ErnieConfig
 from optimization import optimization
 from utils.args import print_arguments
 from utils.init import init_checkpoint, init_pretraining_params
-import paddle.distributed.fleet.base.role_maker as role_maker
-import time
-import paddle.distributed.fleet as fleet
 
 from pretrain_args import parser
 import json
-
+import logging
+import paddle
+logging.basicConfig(level=logging.DEBUG, format=' %(asctime)s - %(levelname)s -%(message)s')
 args = parser.parse_args()
-
-# yapf: enable.
 
 paddle.enable_static()
 
-role = role_maker.PaddleCloudRoleMaker(is_collective=True)
-fleet.init(role)
+# yapf: enable.
 
 ascend = 1
 with open(args.task_group_json) as f:
@@ -94,20 +89,20 @@ def create_model(pyreader_name, ernie_config, task_group):
     checkpoints = ernie.get_checkpoints()
     total_loss = mask_lm_loss * lm_weight
     graph_vars = [mask_lm_loss, lm_weight]
-
-    #index = 0
-    #total_constract_loss = 0
-    #for task in task_group:
-    #    task_labels = task_params[index]
-    #    task_weight = task_params[index + 1]
-    #    task_loss, task_acc = ernie.get_task_output(task, task_labels, gather_idx)
-    #    total_loss += task_loss * task_weight * task["loss_weight"]
-    #    if task["constart"]:
-    #        contract_loss = ernie.get_contrastive_loss(batch_mask, loss_mask)
-    #        total_loss += contract_loss * task_weight
-    #        total_constract_loss += contract_loss * task_weight
-    #    graph_vars.extend([task_acc, task_weight])
-    #    index += 2
+    
+    index = 0
+    total_constract_loss = 0
+    for task in task_group:
+        task_labels = task_params[index]
+        task_weight = task_params[index + 1]
+        task_loss, task_acc = ernie.get_task_output(task, task_labels, gather_idx)
+        total_loss += task_loss * task_weight * task["loss_weight"]
+        if False: #task["constart"]:
+            contract_loss = ernie.get_contrastive_loss(batch_mask, loss_mask)
+            total_loss += contract_loss * task_weight
+            total_constract_loss += contract_loss * task_weight
+        graph_vars.extend([task_acc, task_weight])
+        index += 2
 
     ### build output
     #graph_vars.append(total_constract_loss)
@@ -204,6 +199,15 @@ def predict_wrapper(args,
 
     return predict
 
+def print_out(out_var, dtype=np.float32):
+    if ascend:
+        data = np.array(out_var, dtype=np.uint8)
+        b_arr = data.tobytes()
+        arr_2 = np.frombuffer(b_arr, dtype=dtype)
+    else:
+        arr_2 = out_var
+    return arr_2
+
 
 def train(args):
     print("pretraining start")
@@ -287,10 +291,9 @@ def train(args):
     #    fetch_list=[var for var in graph_vars])
 
     train_data_generator = data_reader.data_generator()
-    steps = 0
-    time_begin = time.time()
+    steps = 1
     feed_list = {}
-    while steps < 1:#args.num_train_steps:
+    while steps < 5:#args.num_train_steps:
         try:
             steps += 1#node_nums
             skip_steps = args.skip_steps# * node_nums
@@ -301,44 +304,44 @@ def train(args):
                 
             fetch_list = []
             if trainer_id == 0 and steps % skip_steps == 0:
-                fetch_list = [var for var in graph_vars] + [scheduled_lr.name]
+                fetch_list = [var for var in graph_vars] + [scheduled_lr]
                 if args.use_amp:
-                    fetch_list.append(loss_scaling.name)
+                    fetch_list.append(loss_scaling)
 
+            time_begin = time.time()
             outputs = train_exe.run(feed=feed_list, fetch_list=fetch_list, program=train_program)
             time_end = time.time()
             used_time = time_end - time_begin
             
             if outputs:
-                #each_mask_lm_cost, lm_w = outputs[:2]
-                #if args.use_amp:
-                #    each_total_constract_loss, each_total_cost, np_lr, l_scaling = outputs[-4:]
-                #else:
-                #    each_total_constract_loss, each_total_cost, np_lr = outputs[-3:]
-                #acc_list =[]
-                #index = 2
-                #for task in task_group:
-                #    each_task_acc = outputs[index]
-                #    task_w = outputs[index + 1]
-                #    acc = np.sum(each_task_acc * task_w) / np.sum(task_w)
-                #    acc_list.append("%s acc: %f" % (task["task_name"], acc))
-                #    index += 2
+                each_mask_lm_cost, lm_w = outputs[:2]
+                if args.use_amp:
+                    each_total_cost, np_lr, l_scaling = outputs[-3:]
+                else:
+                    each_total_cost, np_lr = outputs[-2:]
+                acc_list =[]
+                index = 2
+                for task in task_group:
+                    each_task_acc = outputs[index]
+                    task_w = outputs[index + 1]
+                    acc = np.sum(print_out(each_task_acc) * print_out(task_w)) / np.sum(print_out(task_w))
+                    acc_list.append("%s acc: %f" % (task["task_name"], acc))
+                    index += 2
 
                 epoch, current_file_index, total_file, current_file, mask_type = data_reader.get_progress()
-                #if args.use_amp:
-                #    print("current learning_rate:%f, loss scaling:%f" % (np_lr[0], l_scaling[0]))
-                #else:
-                #    print("current learning_rate:%f" % np_lr[0])
-                print("lm_weight: %f", outputs[0])
-                #print(
-                #    "epoch: %d, progress: %d/%d, step: %d, constract_loss: %f, loss: %f, "
-                #    "ppl: %f, %s, speed: %f steps/s, file: %s, mask_type: %s"
-                #    % (epoch, current_file_index, total_file, steps,
-                #       np.mean(each_total_constract_loss), np.mean(each_total_cost),
-                #       np.exp(np.sum(each_mask_lm_cost * lm_w) / np.sum(lm_w)),
-                #       ", ".join(acc_list), skip_steps / used_time,
-                #       current_file, mask_type))
-                time_begin = time.time()
+                if args.use_amp:
+                    print("current learning_rate:%f, loss scaling:%f" % (print_out(np_lr), print_out(l_scaling)))
+                else:
+                    print("current learning_rate:%s" % print_out(np_lr))
+                print(
+                    "epoch: %d, progress: %d/%d, step: %d, loss: %f, "
+                    "ppl: %f, %s, speed: %f steps/s, file: %s, mask_type: %s"
+                    % (epoch, current_file_index, total_file, steps, 
+                       np.mean(print_out(each_total_cost)), 
+                       np.exp(np.sum(print_out(each_mask_lm_cost) * print_out(lm_w)) / np.sum(print_out(lm_w))),
+                       ", ".join(acc_list), skip_steps / used_time,
+                       current_file, mask_type))
+                #time_begin = time.time()
             elif steps % skip_steps == 0:
                 epoch, current_file_index, total_file, current_file, mask_type = data_reader.get_progress(
                 )
